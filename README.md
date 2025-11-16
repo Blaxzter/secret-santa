@@ -8,23 +8,23 @@ A modern Secret Santa web application built with React, TypeScript, and Cloudfla
 
 ### Home Page
 
-<img width="632" height="901" alt="Home Page" src="https://github.com/user-attachments/assets/91cfc999-67ff-4ce0-9a67-5a781145cfa2" />
+<img width="632" height="901" alt="Home Page" src="https://github.com/user-attachments/assets/461de36e-bf23-4127-a16b-ac50d32019d7" />
 
 ### Admin Dashboard
 
-<img width="1237" height="631" alt="Rooms Overview" src="https://github.com/user-attachments/assets/7e60d18a-e1d2-4dc7-8494-41f372b2928e" />
+<img width="1237" height="631" alt="Rooms Overview" src="https://github.com/user-attachments/assets/74e7c37a-7955-438b-a8a1-a16919087ba4" />
 
 ### Room Admin
 
-<img width="874" height="864" alt="Room Admin" src="https://github.com/user-attachments/assets/2f892f26-5f33-49f3-9eac-74689b0fad43" />
+<img width="874" height="864" alt="Room Admin" src="https://github.com/user-attachments/assets/4c6787f1-83d8-4224-a81c-f1cc66fa8f69" />
 
 ### Participant View
 
-<img width="857" height="799" alt="Participant View 1" src="https://github.com/user-attachments/assets/c8208e63-94b3-4cbd-a3bb-e086b9cd9bc9" />
+<img width="857" height="799" alt="Participant View 1" src="https://github.com/user-attachments/assets/7dcab9df-2989-45d2-9438-9da988e57bc7" />
 
-<img width="1149" height="738" alt="Participant View 2" src="https://github.com/user-attachments/assets/b7e35222-d8a2-4bb3-b6d1-ad43efed7f87" />
+<img width="1149" height="738" alt="Participant View 2" src="https://github.com/user-attachments/assets/7fdd90a6-1af8-4790-ac3a-a988ee3db0e8" />
 
-<img width="1078" height="769" alt="Participant View 3" src="https://github.com/user-attachments/assets/1856543e-d627-496c-9dcd-422c6894df0a" />
+<img width="1078" height="769" alt="Participant View 3" src="https://github.com/user-attachments/assets/5e7a4cf3-0a43-4af1-87f6-85ddbedc12ff" />
 
 ## ✨ Features
 
