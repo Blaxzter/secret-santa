@@ -1,0 +1,41 @@
+{
+    "name": "Assignment",
+    "type": "object",
+    "properties": {
+        "room_id": {
+            "type": "string",
+            "description": "Reference to the Room"
+        },
+        "participant_name": {
+            "type": "string",
+            "description": "Name of the participant"
+        },
+        "drawn_name": {
+            "type": "string",
+            "description": "Name of the person this participant drew"
+        },
+        "participant_token": {
+            "type": "string",
+            "description": "Unique token for participant access"
+        },
+        "wishes": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "default": [],
+            "description": "Participant's wish list"
+        },
+        "has_viewed": {
+            "type": "boolean",
+            "default": false,
+            "description": "Whether participant has viewed their assignment"
+        }
+    },
+    "required": [
+        "room_id",
+        "participant_name",
+        "drawn_name",
+        "participant_token"
+    ]
+}

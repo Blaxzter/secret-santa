@@ -1,0 +1,43 @@
+{
+    "name": "Room",
+    "type": "object",
+    "properties": {
+        "room_name": {
+            "type": "string",
+            "description": "Name of the Secret Santa room"
+        },
+        "participant_names": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "description": "List of participant names"
+        },
+        "price_limit": {
+            "type": "number",
+            "description": "Maximum gift price"
+        },
+        "currency": {
+            "type": "string",
+            "enum": ["EUR", "USD", "GBP", "CHF"],
+            "default": "EUR",
+            "description": "Currency for price limit"
+        },
+        "language": {
+            "type": "string",
+            "enum": ["de", "en"],
+            "default": "de",
+            "description": "Room language"
+        },
+        "is_drawn": {
+            "type": "boolean",
+            "default": false,
+            "description": "Whether assignments have been generated"
+        },
+        "admin_token": {
+            "type": "string",
+            "description": "Token for admin access"
+        }
+    },
+    "required": ["room_name", "participant_names", "price_limit", "language"]
+}
