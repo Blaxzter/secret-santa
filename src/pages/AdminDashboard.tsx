@@ -69,7 +69,7 @@ export default function AdminDashboard() {
                         </div>
                         <Button
                             onClick={() => navigate(createPageUrl("Home"))}
-                            className="border-4 border-black bg-[#A8E6CF] hover:bg-[#88D4AB] h-14 px-6 text-lg font-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
+                            className="border-4 border-black bg-[#A8E6CF] hover:bg-[#88D4AB] h-14 px-6 text-lg font-black text-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
                         >
                             <Plus className="w-5 h-5 mr-2" />
                             Neuer Raum
@@ -176,7 +176,7 @@ export default function AdminDashboard() {
                                             onClick={(e) =>
                                                 handleDelete(e, room.id)
                                             }
-                                            className={`border-4 border-black h-12 px-4 font-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] ${
+                                            className={`border-4 border-black h-12 px-4 font-black text-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] ${
                                                 deleteConfirm === room.id
                                                     ? "bg-red-500 hover:bg-red-600"
                                                     : "bg-gray-300 hover:bg-gray-400"

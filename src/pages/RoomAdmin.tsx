@@ -25,6 +25,7 @@ const translations = {
         copyLink: "Link kopieren",
         copied: "Kopiert!",
         updatePrice: "Preis aktualisieren",
+        updateRoomName: "Raumnamen aktualisieren",
         shareLinks:
             "Teile diese personalisierten Links mit deinen Teilnehmern:",
         backToAllRooms: "Zurück zu allen Räumen",
@@ -37,6 +38,7 @@ const translations = {
         copyLink: "Copy Link",
         copied: "Copied!",
         updatePrice: "Update Price",
+        updateRoomName: "Update Room Name",
         shareLinks: "Share these personalized links with your participants:",
         backToAllRooms: "Back to All Rooms",
     },
@@ -49,6 +51,7 @@ export default function RoomAdmin() {
     const adminToken = searchParams.get("token");
 
     const [newPriceLimit, setNewPriceLimit] = useState("");
+    const [newRoomName, setNewRoomName] = useState("");
     const [copiedToken, setCopiedToken] = useState<string | null>(null);
 
     const { data: rooms, isLoading: roomsLoading } = useQuery({
@@ -79,6 +82,17 @@ export default function RoomAdmin() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["room", adminToken] });
             setNewPriceLimit("");
+        },
+    });
+
+    const updateRoomNameMutation = useMutation({
+        mutationFn: (newName: string) =>
+            api.entities.Room.update(room!.id, {
+                room_name: newName,
+            }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["room", adminToken] });
+            setNewRoomName("");
         },
     });
 
@@ -134,14 +148,14 @@ export default function RoomAdmin() {
         return (
             <div className="min-h-screen bg-[#FF6B9D] flex items-center justify-center p-4">
                 <Card className="bg-white border-4 border-black shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] p-8">
-                    <p className="text-2xl font-black mb-4">
+                    <p className="text-2xl font-black text-black mb-4">
                         Raum nicht gefunden!
                     </p>
                     <Button
                         onClick={() =>
                             navigate(createPageUrl("AdminDashboard"))
                         }
-                        className="border-4 border-black bg-[#A8E6CF] hover:bg-[#88D4AB] h-12 px-6 font-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                        className="border-4 border-black bg-[#A8E6CF] hover:bg-[#88D4AB] h-12 px-6 font-black text-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
                     >
                         <ArrowLeft className="w-5 h-5 mr-2" />
                         Zurück
@@ -225,6 +239,37 @@ export default function RoomAdmin() {
                     </Card>
                 </div>
 
+                {/* Update Room Name */}
+                <Card className="bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-6">
+                    <Label className="text-xl font-black text-black mb-3 block">
+                        {t.updateRoomName}
+                    </Label>
+                    <div className="flex gap-3">
+                        <Input
+                            type="text"
+                            value={newRoomName}
+                            onChange={(e) => setNewRoomName(e.target.value)}
+                            placeholder={room.room_name}
+                            className="border-4 border-black h-12 text-lg font-bold shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] focus-visible:ring-0 focus-visible:ring-offset-0"
+                        />
+                        <Button
+                            onClick={() =>
+                                updateRoomNameMutation.mutate(newRoomName)
+                            }
+                            disabled={
+                                !newRoomName || updateRoomNameMutation.isPending
+                            }
+                            className="border-4 border-black bg-[#FF6B9D] hover:bg-[#FF5588] h-12 px-6 text-lg font-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] transition-all disabled:opacity-50"
+                        >
+                            {updateRoomNameMutation.isPending ? (
+                                <Loader2 className="w-5 h-5 animate-spin" />
+                            ) : (
+                                t.updateRoomName
+                            )}
+                        </Button>
+                    </div>
+                </Card>
+
                 {/* Update Price */}
                 <Card className="bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-6">
                     <Label className="text-xl font-black text-black mb-3 block">
@@ -271,7 +316,11 @@ export default function RoomAdmin() {
                                 );
                             const participantUrl = `${baseUrl}/#${createPageUrl(
                                 "Participant"
-                            )}?token=${assignment.participant_token}`;
+                            )}?token=${
+                                assignment.participant_token
+                            }&name=${encodeURIComponent(
+                                assignment.participant_name
+                            )}`;
 
                             return (
                                 <div
@@ -293,7 +342,7 @@ export default function RoomAdmin() {
                                                 assignment.participant_name
                                             )
                                         }
-                                        className="border-4 border-black bg-[#FFD93D] hover:bg-[#FFC700] px-6 h-12 text-lg font-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] transition-all whitespace-nowrap"
+                                        className="border-4 border-black bg-[#FFD93D] hover:bg-[#FFC700] px-6 h-12 text-lg font-black text-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] transition-all whitespace-nowrap"
                                     >
                                         <Copy className="w-5 h-5 mr-2" />
                                         {copiedToken ===

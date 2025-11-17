@@ -136,7 +136,7 @@ export default function WishesStep({
                                         />
                                         <Button
                                             onClick={addWish}
-                                            className="border-4 border-black bg-[#FFD93D] hover:bg-[#FFC700] h-12 px-6 font-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
+                                            className="border-4 border-black bg-[#FFD93D] hover:bg-[#FFC700] h-12 px-6 font-black text-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
                                         >
                                             <Plus className="w-5 h-5" />
                                         </Button>
