@@ -14,6 +14,9 @@ import {
     Link as LinkIcon,
     Loader2,
     ArrowLeft,
+    Shuffle,
+    Eye,
+    EyeOff,
 } from "lucide-react";
 
 const translations = {
@@ -29,6 +32,12 @@ const translations = {
         shareLinks:
             "Teile diese personalisierten Links mit deinen Teilnehmern:",
         backToAllRooms: "Zurück zu allen Räumen",
+        reshuffle: "Neu Mischen",
+        reshuffleConfirm:
+            "Möchten Sie die Zuteilungen wirklich neu mischen? Dies kann nicht rückgängig gemacht werden!",
+        sneakPeek: "Zuteilung anzeigen",
+        hide: "Verbergen",
+        assignedTo: "→",
     },
     en: {
         title: "Room Admin",
@@ -41,6 +50,12 @@ const translations = {
         updateRoomName: "Update Room Name",
         shareLinks: "Share these personalized links with your participants:",
         backToAllRooms: "Back to All Rooms",
+        reshuffle: "Reshuffle",
+        reshuffleConfirm:
+            "Are you sure you want to reshuffle assignments? This cannot be undone!",
+        sneakPeek: "Show Assignment",
+        hide: "Hide",
+        assignedTo: "→",
     },
 };
 
@@ -53,6 +68,9 @@ export default function RoomAdmin() {
     const [newPriceLimit, setNewPriceLimit] = useState("");
     const [newRoomName, setNewRoomName] = useState("");
     const [copiedToken, setCopiedToken] = useState<string | null>(null);
+    const [visibleAssignments, setVisibleAssignments] = useState<Set<string>>(
+        new Set()
+    );
 
     const { data: rooms, isLoading: roomsLoading } = useQuery({
         queryKey: ["room", adminToken],
@@ -96,6 +114,16 @@ export default function RoomAdmin() {
         },
     });
 
+    const reshuffleMutation = useMutation({
+        mutationFn: () => api.entities.Room.reshuffle(room!.id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({
+                queryKey: ["assignments", room!.id],
+            });
+            setVisibleAssignments(new Set());
+        },
+    });
+
     const copyToClipboard = (token: string, name: string) => {
         const baseUrl =
             window.location.origin +
@@ -106,6 +134,24 @@ export default function RoomAdmin() {
         navigator.clipboard.writeText(url);
         setCopiedToken(name);
         setTimeout(() => setCopiedToken(null), 2000);
+    };
+
+    const handleReshuffle = () => {
+        if (window.confirm(t.reshuffleConfirm)) {
+            reshuffleMutation.mutate();
+        }
+    };
+
+    const toggleAssignmentVisibility = (assignmentId: string) => {
+        setVisibleAssignments((prev) => {
+            const newSet = new Set(prev);
+            if (newSet.has(assignmentId)) {
+                newSet.delete(assignmentId);
+            } else {
+                newSet.add(assignmentId);
+            }
+            return newSet;
+        });
     };
 
     if (!adminToken) {
@@ -180,12 +226,28 @@ export default function RoomAdmin() {
 
                 {/* Header */}
                 <div className="bg-[#FF6B9D] border-4 border-black p-6 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] rotate-[-1deg]">
-                    <h1 className="text-5xl font-black text-black mb-2">
-                        {t.title}
-                    </h1>
-                    <p className="text-2xl font-bold text-black">
-                        {room.room_name}
-                    </p>
+                    <div className="flex justify-between items-start mb-2">
+                        <div>
+                            <h1 className="text-5xl font-black text-black mb-2">
+                                {t.title}
+                            </h1>
+                            <p className="text-2xl font-bold text-black">
+                                {room.room_name}
+                            </p>
+                        </div>
+                        <Button
+                            onClick={handleReshuffle}
+                            disabled={reshuffleMutation.isPending}
+                            className="border-4 border-black bg-[#FFD93D] hover:bg-[#FFC700] h-12 px-6 text-lg font-black text-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] transition-all disabled:opacity-50"
+                        >
+                            {reshuffleMutation.isPending ? (
+                                <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                            ) : (
+                                <Shuffle className="w-5 h-5 mr-2" />
+                            )}
+                            {t.reshuffle}
+                        </Button>
+                    </div>
                 </div>
 
                 {/* Stats Cards */}
@@ -325,31 +387,71 @@ export default function RoomAdmin() {
                             return (
                                 <div
                                     key={assignment.id}
-                                    className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 bg-[#A8E6CF] border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                                    className="flex flex-col gap-4 p-4 bg-[#A8E6CF] border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
                                 >
-                                    <div className="flex-1">
-                                        <p className="text-xl font-black text-black mb-1">
-                                            {assignment.participant_name}
-                                        </p>
-                                        <p className="text-xs font-bold text-black opacity-60 break-all">
-                                            {participantUrl}
-                                        </p>
-                                    </div>
-                                    <Button
-                                        onClick={() =>
-                                            copyToClipboard(
-                                                assignment.participant_token,
+                                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                        <div className="flex-1">
+                                            <p className="text-xl font-black text-black mb-1">
+                                                {assignment.participant_name}
+                                            </p>
+                                            <p className="text-xs font-bold text-black opacity-60 break-all">
+                                                {participantUrl}
+                                            </p>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <Button
+                                                onClick={() =>
+                                                    toggleAssignmentVisibility(
+                                                        assignment.id
+                                                    )
+                                                }
+                                                className="border-4 border-black bg-[#FDFB9C] hover:bg-[#FDF080] px-6 h-12 text-lg font-black text-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] transition-all whitespace-nowrap"
+                                            >
+                                                {visibleAssignments.has(
+                                                    assignment.id
+                                                ) ? (
+                                                    <>
+                                                        <EyeOff className="w-5 h-5 mr-2" />
+                                                        {t.hide}
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Eye className="w-5 h-5 mr-2" />
+                                                        {t.sneakPeek}
+                                                    </>
+                                                )}
+                                            </Button>
+                                            <Button
+                                                onClick={() =>
+                                                    copyToClipboard(
+                                                        assignment.participant_token,
+                                                        assignment.participant_name
+                                                    )
+                                                }
+                                                className="border-4 border-black bg-[#FFD93D] hover:bg-[#FFC700] px-6 h-12 text-lg font-black text-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] transition-all whitespace-nowrap"
+                                            >
+                                                <Copy className="w-5 h-5 mr-2" />
+                                                {copiedToken ===
                                                 assignment.participant_name
-                                            )
-                                        }
-                                        className="border-4 border-black bg-[#FFD93D] hover:bg-[#FFC700] px-6 h-12 text-lg font-black text-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] transition-all whitespace-nowrap"
-                                    >
-                                        <Copy className="w-5 h-5 mr-2" />
-                                        {copiedToken ===
-                                        assignment.participant_name
-                                            ? t.copied
-                                            : t.copyLink}
-                                    </Button>
+                                                    ? t.copied
+                                                    : t.copyLink}
+                                            </Button>
+                                        </div>
+                                    </div>
+                                    {visibleAssignments.has(assignment.id) &&
+                                        assignment.drawn_name && (
+                                            <div className="bg-white border-4 border-black p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                                                <p className="text-lg font-black text-black">
+                                                    {
+                                                        assignment.participant_name
+                                                    }{" "}
+                                                    <span className="text-[#FF6B9D]">
+                                                        {t.assignedTo}
+                                                    </span>{" "}
+                                                    {assignment.drawn_name}
+                                                </p>
+                                            </div>
+                                        )}
                                 </div>
                             );
                         })}

@@ -195,6 +195,96 @@ async function deleteRoom(env: Env, id: string): Promise<Response> {
     return jsonResponse({ success: true, message: "Room deleted" });
 }
 
+async function reshuffleRoom(env: Env, id: string): Promise<Response> {
+    // Get room and current assignments
+    const { results: roomResults } = await env.secret_santa_db
+        .prepare("SELECT * FROM rooms WHERE id = ?")
+        .bind(id)
+        .all();
+
+    if (roomResults.length === 0) {
+        return jsonResponse({ error: "Room not found" }, 404);
+    }
+
+    const room = roomResults[0] as any;
+    const participantNames = JSON.parse(room.participant_names || "[]");
+
+    if (participantNames.length < 2) {
+        return jsonResponse({ error: "Need at least 2 participants" }, 400);
+    }
+
+    // Shuffle algorithm (Fisher-Yates)
+    const shuffled = [...participantNames];
+    let valid = false;
+    let attempts = 0;
+    const maxAttempts = 100;
+
+    while (!valid && attempts < maxAttempts) {
+        for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+
+        // Validate: no one draws themselves
+        valid = participantNames.every(
+            (name: string, idx: number) => name !== shuffled[idx]
+        );
+        attempts++;
+    }
+
+    if (!valid) {
+        return jsonResponse(
+            {
+                error: "Could not create valid assignment after multiple attempts",
+            },
+            500
+        );
+    }
+
+    // Update all assignments with new drawn names
+    const { results: assignmentResults } = await env.secret_santa_db
+        .prepare("SELECT * FROM assignments WHERE room_id = ?")
+        .bind(id)
+        .all();
+
+    const updatedAssignments = [];
+
+    for (let i = 0; i < participantNames.length; i++) {
+        const participantName = participantNames[i];
+        const drawnName = shuffled[i];
+
+        // Find the assignment for this participant
+        const assignment = assignmentResults.find(
+            (a: any) => a.participant_name === participantName
+        ) as any;
+
+        if (assignment) {
+            // Update the assignment
+            await env.secret_santa_db
+                .prepare(
+                    "UPDATE assignments SET drawn_name = ?, has_viewed = ? WHERE id = ?"
+                )
+                .bind(drawnName, 0, assignment.id)
+                .run();
+
+            updatedAssignments.push({
+                ...assignment,
+                drawn_name: drawnName,
+                has_viewed: false,
+                wishes: JSON.parse(assignment.wishes || "[]"),
+            });
+        }
+    }
+
+    // Mark room as drawn
+    await env.secret_santa_db
+        .prepare("UPDATE rooms SET is_drawn = ? WHERE id = ?")
+        .bind(1, id)
+        .run();
+
+    return jsonResponse(updatedAssignments);
+}
+
 // Assignment handlers
 async function listAssignments(env: Env, url: URL): Promise<Response> {
     const roomId = url.searchParams.get("room_id");
@@ -429,6 +519,13 @@ export default {
                 }
                 if (request.method === "DELETE") {
                     return await deleteRoom(env, id);
+                }
+            }
+
+            if (url.pathname.match(/^\/api\/rooms\/[^/]+\/reshuffle$/)) {
+                const id = url.pathname.split("/")[3];
+                if (request.method === "POST") {
+                    return await reshuffleRoom(env, id);
                 }
             }
 

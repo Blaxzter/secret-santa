@@ -76,6 +76,12 @@ class ApiClient {
                 }
             );
         },
+
+        reshuffle: async (id: string): Promise<Assignment[]> => {
+            return this.fetch<Assignment[]>(`/rooms/${id}/reshuffle`, {
+                method: "POST",
+            });
+        },
     };
 
     // Assignment API
