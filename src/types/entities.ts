@@ -8,7 +8,7 @@ export interface Room {
     currency: "EUR" | "USD" | "GBP" | "CHF";
     language: "de" | "en";
     is_drawn: boolean;
-    admin_token: string;
+    owner_id: string;
     created_date?: string;
 }
 

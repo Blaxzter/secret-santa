@@ -9,12 +9,12 @@ CREATE TABLE IF NOT EXISTS rooms (
   currency TEXT NOT NULL DEFAULT 'EUR',
   language TEXT NOT NULL DEFAULT 'de',
   is_drawn INTEGER NOT NULL DEFAULT 0, -- Boolean stored as integer (0 or 1)
-  admin_token TEXT NOT NULL UNIQUE,
+  owner_id TEXT NOT NULL,
   created_date TEXT NOT NULL
 );
 
--- Index for faster admin token lookups
-CREATE INDEX IF NOT EXISTS idx_rooms_admin_token ON rooms(admin_token);
+-- Index for faster owner_id lookups
+CREATE INDEX IF NOT EXISTS idx_rooms_owner_id ON rooms(owner_id);
 
 -- Assignments table
 CREATE TABLE IF NOT EXISTS assignments (

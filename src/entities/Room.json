@@ -34,10 +34,10 @@
             "default": false,
             "description": "Whether assignments have been generated"
         },
-        "admin_token": {
+        "owner_id": {
             "type": "string",
-            "description": "Token for admin access"
+            "description": "User ID who owns this room"
         }
     },
-    "required": ["room_name", "participant_names", "price_limit", "language"]
+    "required": ["room_name", "participant_names", "price_limit", "language", "owner_id"]
 }

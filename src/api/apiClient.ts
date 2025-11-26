@@ -55,7 +55,10 @@ class ApiClient {
             });
         },
 
-        update: async (id: string, data: UpdateRoomInput): Promise<Room> => {
+        update: async (
+            id: string,
+            data: UpdateRoomInput & { owner_id: string }
+        ): Promise<Room> => {
             return this.fetch<Room>(`/rooms/${id}`, {
                 method: "PATCH",
                 body: JSON.stringify(data),
@@ -67,20 +70,24 @@ class ApiClient {
         },
 
         delete: async (
-            id: string
+            id: string,
+            ownerId: string
         ): Promise<{ success: boolean; message: string }> => {
             return this.fetch<{ success: boolean; message: string }>(
-                `/rooms/${id}`,
+                `/rooms/${id}?owner_id=${encodeURIComponent(ownerId)}`,
                 {
                     method: "DELETE",
                 }
             );
         },
 
-        reshuffle: async (id: string): Promise<Assignment[]> => {
-            return this.fetch<Assignment[]>(`/rooms/${id}/reshuffle`, {
-                method: "POST",
-            });
+        reshuffle: async (id: string, ownerId: string): Promise<Assignment[]> => {
+            return this.fetch<Assignment[]>(
+                `/rooms/${id}/reshuffle?owner_id=${encodeURIComponent(ownerId)}`,
+                {
+                    method: "POST",
+                }
+            );
         },
     };
 
