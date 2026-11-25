@@ -6,6 +6,8 @@ import type {
     CreateAssignmentInput,
     UpdateRoomInput,
     UpdateAssignmentInput,
+    ParticipantInput,
+    UpdateParticipantsResult,
 } from "@/types/entities";
 
 const API_BASE = "/api";
@@ -77,6 +79,20 @@ class ApiClient {
                 `/rooms/${id}?owner_id=${encodeURIComponent(ownerId)}`,
                 {
                     method: "DELETE",
+                }
+            );
+        },
+
+        updateParticipants: async (
+            id: string,
+            ownerId: string,
+            participants: ParticipantInput[]
+        ): Promise<UpdateParticipantsResult> => {
+            return this.fetch<UpdateParticipantsResult>(
+                `/rooms/${id}/participants`,
+                {
+                    method: "PUT",
+                    body: JSON.stringify({ owner_id: ownerId, participants }),
                 }
             );
         },

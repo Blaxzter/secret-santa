@@ -27,3 +27,14 @@ export type CreateRoomInput = Omit<Room, "id" | "created_date">;
 export type CreateAssignmentInput = Omit<Assignment, "id">;
 export type UpdateRoomInput = Partial<Omit<Room, "id" | "created_date">>;
 export type UpdateAssignmentInput = Partial<Omit<Assignment, "id">>;
+
+// Existing participants are referenced by their assignment id, new ones have none
+export interface ParticipantInput {
+    id?: string;
+    name: string;
+}
+
+export interface UpdateParticipantsResult {
+    redrawn: boolean;
+    assignments: Assignment[];
+}

@@ -28,9 +28,12 @@ import {
   Share2,
   AlertTriangle,
   Heart,
+  UserPen,
 } from "lucide-react";
 import { getUserId } from "./Home";
 import WishesOverviewDialog from "@/components/admin/WishesOverviewDialog";
+import EditParticipantsDialog from "@/components/admin/EditParticipantsDialog";
+import type { ParticipantInput } from "@/types/entities";
 
 const translations = {
   de: {
@@ -60,6 +63,7 @@ const translations = {
     confirm: "Ja, fortfahren",
     cancel: "Abbrechen",
     viewAllWishes: "Alle Wünsche",
+    editParticipants: "Teilnehmer bearbeiten",
   },
   en: {
     title: "Room Admin",
@@ -88,6 +92,7 @@ const translations = {
     confirm: "Yes, continue",
     cancel: "Cancel",
     viewAllWishes: "All Wishes",
+    editParticipants: "Edit Participants",
   },
 };
 
@@ -110,6 +115,7 @@ export default function RoomAdmin() {
     null
   );
   const [wishesDialogOpen, setWishesDialogOpen] = useState(false);
+  const [participantsDialogOpen, setParticipantsDialogOpen] = useState(false);
 
   const { data: rooms, isLoading: roomsLoading } = useQuery({
     queryKey: ["room", roomId, userId],
@@ -162,6 +168,16 @@ export default function RoomAdmin() {
       queryClient.invalidateQueries({
         queryKey: ["assignments", room!.id],
       });
+      setVisibleAssignments(new Set());
+    },
+  });
+
+  const updateParticipantsMutation = useMutation({
+    mutationFn: (participants: ParticipantInput[]) =>
+      api.entities.Room.updateParticipants(room!.id, userId, participants),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["room", roomId, userId] });
+      queryClient.invalidateQueries({ queryKey: ["assignments", room!.id] });
       setVisibleAssignments(new Set());
     },
   });
@@ -447,9 +463,18 @@ export default function RoomAdmin() {
 
         {/* Links */}
         <Card className="bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-4 md:p-8 rotate-[0.1deg] md:rotate-[0.5deg]">
-          <h2 className="text-xl md:text-3xl font-black text-black">
-            {t.shareLinks}
-          </h2>
+          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3 mb-4">
+            <h2 className="text-xl md:text-3xl font-black text-black">
+              {t.shareLinks}
+            </h2>
+            <Button
+              onClick={() => setParticipantsDialogOpen(true)}
+              className="self-start flex-shrink-0 border-4 border-black bg-[#FDFB9C] hover:bg-[#FDF080] h-10 md:h-12 px-4 md:px-6 text-sm md:text-lg font-black text-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] transition-all whitespace-nowrap"
+            >
+              <UserPen className="w-5 h-5 mr-2" />
+              {t.editParticipants}
+            </Button>
+          </div>
           <div className="space-y-4">
             {assignments?.map((assignment, index) => {
               const baseUrl =
@@ -638,6 +663,19 @@ export default function RoomAdmin() {
         onOpenChange={setWishesDialogOpen}
         assignments={assignments || []}
         language={room?.language || "de"}
+      />
+
+      {/* Edit Participants Dialog */}
+      <EditParticipantsDialog
+        open={participantsDialogOpen}
+        onOpenChange={setParticipantsDialogOpen}
+        participantNames={room.participant_names}
+        assignments={assignments || []}
+        language={room.language}
+        isSaving={updateParticipantsMutation.isPending}
+        onSave={(participants) =>
+          updateParticipantsMutation.mutateAsync(participants)
+        }
       />
     </div>
   );

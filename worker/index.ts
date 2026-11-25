@@ -30,7 +30,7 @@ function jsonResponse(data: any, status = 200): Response {
     headers: {
       "Content-Type": "application/json",
       "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, OPTIONS",
+      "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
       "Access-Control-Allow-Headers": "Content-Type",
     },
   });
@@ -339,6 +339,174 @@ async function reshuffleRoom(
   return jsonResponse(updatedAssignments);
 }
 
+// Returns a permutation of `names` in which nobody is mapped to themselves.
+function drawDerangement(names: string[]): string[] {
+  for (let attempt = 0; attempt < 100; attempt++) {
+    const shuffled = [...names];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    if (names.every((name, idx) => name !== shuffled[idx])) {
+      return shuffled;
+    }
+  }
+  // Fallback: circular shift is always a valid derangement for n >= 2
+  return names.map((_, i) => names[(i + 1) % names.length]);
+}
+
+const MIN_PARTICIPANTS = 3;
+
+// Rename, add and remove participants of an existing room.
+// - Existing participants keep their token, so links already sent stay valid.
+// - Pure renames keep the current drawing (drawn_name references are renamed too).
+// - Adding or removing someone redraws the whole room and resets has_viewed.
+async function updateParticipants(
+  env: Env,
+  id: string,
+  request: Request
+): Promise<Response> {
+  const data = await parseBody(request);
+
+  if (!data.owner_id) {
+    return jsonResponse({ error: "owner_id is required" }, 400);
+  }
+  if (!Array.isArray(data.participants)) {
+    return jsonResponse({ error: "participants must be an array" }, 400);
+  }
+
+  const room = (await env.secret_santa_db
+    .prepare("SELECT * FROM rooms WHERE id = ?")
+    .bind(id)
+    .first()) as any;
+
+  if (!room) {
+    return jsonResponse({ error: "Room not found" }, 404);
+  }
+  if (room.owner_id !== data.owner_id) {
+    return jsonResponse({ error: "Unauthorized" }, 403);
+  }
+
+  const { results: existingRows } = await env.secret_santa_db
+    .prepare("SELECT * FROM assignments WHERE room_id = ?")
+    .bind(id)
+    .all();
+  const existing = new Map<string, any>(
+    existingRows.map((row: any) => [row.id, row])
+  );
+
+  // Validate and normalize input
+  const participants: { id?: string; name: string }[] = [];
+  const seenNames = new Set<string>();
+  const seenIds = new Set<string>();
+
+  for (const entry of data.participants) {
+    const name = typeof entry?.name === "string" ? entry.name.trim() : "";
+    if (!name) {
+      return jsonResponse({ error: "Participant names must not be empty" }, 400);
+    }
+    const key = name.toLocaleLowerCase();
+    if (seenNames.has(key)) {
+      return jsonResponse({ error: `Duplicate participant name: ${name}` }, 400);
+    }
+    seenNames.add(key);
+
+    if (entry.id !== undefined && entry.id !== null) {
+      if (!existing.has(entry.id) || seenIds.has(entry.id)) {
+        return jsonResponse({ error: "Invalid participant id" }, 400);
+      }
+      seenIds.add(entry.id);
+      participants.push({ id: entry.id, name });
+    } else {
+      participants.push({ name });
+    }
+  }
+
+  if (participants.length < MIN_PARTICIPANTS) {
+    return jsonResponse(
+      { error: `Need at least ${MIN_PARTICIPANTS} participants` },
+      400
+    );
+  }
+
+  const removedIds = [...existing.keys()].filter((aid) => !seenIds.has(aid));
+  const added = participants.filter((p) => !p.id);
+  const redraw = added.length > 0 || removedIds.length > 0;
+
+  const names = participants.map((p) => p.name);
+  const statements: D1PreparedStatement[] = [];
+
+  for (const aid of removedIds) {
+    statements.push(
+      env.secret_santa_db.prepare("DELETE FROM assignments WHERE id = ?").bind(aid)
+    );
+  }
+
+  if (redraw) {
+    const drawn = drawDerangement(names);
+    participants.forEach((p, i) => {
+      if (p.id) {
+        statements.push(
+          env.secret_santa_db
+            .prepare(
+              "UPDATE assignments SET participant_name = ?, drawn_name = ?, has_viewed = 0 WHERE id = ?"
+            )
+            .bind(p.name, drawn[i], p.id)
+        );
+      } else {
+        statements.push(
+          env.secret_santa_db
+            .prepare(
+              `INSERT INTO assignments (id, room_id, participant_name, drawn_name, participant_token, wishes, has_viewed)
+             VALUES (?, ?, ?, ?, ?, '[]', 0)`
+            )
+            .bind(generateId(), id, p.name, drawn[i], generateToken())
+        );
+      }
+    });
+  } else {
+    // Only renames: keep the drawing, but follow the renamed names
+    const renamed = new Map<string, string>();
+    for (const p of participants) {
+      renamed.set(existing.get(p.id!).participant_name, p.name);
+    }
+    for (const p of participants) {
+      const current = existing.get(p.id!);
+      const drawnName = renamed.get(current.drawn_name) ?? current.drawn_name;
+      statements.push(
+        env.secret_santa_db
+          .prepare(
+            "UPDATE assignments SET participant_name = ?, drawn_name = ? WHERE id = ?"
+          )
+          .bind(p.name, drawnName, p.id)
+      );
+    }
+  }
+
+  statements.push(
+    env.secret_santa_db
+      .prepare("UPDATE rooms SET participant_names = ?, is_drawn = 1 WHERE id = ?")
+      .bind(JSON.stringify(names), id)
+  );
+
+  // Runs as a single transaction
+  await env.secret_santa_db.batch(statements);
+
+  const { results } = await env.secret_santa_db
+    .prepare("SELECT * FROM assignments WHERE room_id = ?")
+    .bind(id)
+    .all();
+
+  return jsonResponse({
+    redrawn: redraw,
+    assignments: results.map((row: any) => ({
+      ...row,
+      wishes: JSON.parse(row.wishes || "[]"),
+      has_viewed: Boolean(row.has_viewed),
+    })),
+  });
+}
+
 // Assignment handlers
 async function listAssignments(env: Env, url: URL): Promise<Response> {
   const roomId = url.searchParams.get("room_id");
@@ -548,7 +716,7 @@ export default {
       return new Response(null, {
         headers: {
           "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, OPTIONS",
+          "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
           "Access-Control-Allow-Headers": "Content-Type",
         },
       });
@@ -579,6 +747,13 @@ export default {
         const id = url.pathname.split("/")[3];
         if (request.method === "POST") {
           return await reshuffleRoom(env, id, request);
+        }
+      }
+
+      if (url.pathname.match(/^\/api\/rooms\/[^/]+\/participants$/)) {
+        const id = url.pathname.split("/")[3];
+        if (request.method === "PUT") {
+          return await updateParticipants(env, id, request);
         }
       }
 
